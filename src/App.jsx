@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import correct from "./assets/correct.wav";
 import incorrect from "./assets/incorrect.wav";
+import { entitiesArray } from "./entities";
 const initialDuration = 75;
 
 function App() {
@@ -78,7 +79,7 @@ function App() {
                                 incorrectAudioRef.current.play();
                             }
                         }}
-                        markAnswer={(isCorrect) => {
+                        reduceDuration={(isCorrect) => {
                             setDuration((dur) =>
                                 !isCorrect && dur - 5 < 0
                                     ? 0
@@ -88,7 +89,8 @@ function App() {
                                     ? dur - 5
                                     : dur
                             );
-
+                        }}
+                        markAnswer={(isCorrect) => {
                             setIsCorrect(isCorrect);
                         }}
                         isCorrect={isCorrect}
@@ -203,15 +205,9 @@ function FormSection({ finalScore, showHighScores }) {
 }
 
 function cleanUp(text) {
-    const unicodeElements = [
-        { unicode: `&quot;`, text: `"` },
-        { unicode: `&#039;`, text: `'` },
-        { unicode: `&rsquo;`, text: `’` },
-    ];
-
-    for (let chars of unicodeElements) {
-        let re = new RegExp(chars.unicode, "g");
-        text = text.replaceAll(re, chars.text);
+    for (let chars of entitiesArray) {
+        let re = new RegExp(chars.htmlEntity, "g");
+        text = text.replaceAll(re, chars.equivalent);
     }
 
     return text;
@@ -223,6 +219,7 @@ function QuizComponent({
     isCorrect,
     timerStatus,
     playSound,
+    reduceDuration,
 }) {
     // After component mounts quizQuestions is set by the useEffect call that runs once
     const [quizQuestions, setQuizQuestions] = useState(null);
@@ -258,8 +255,7 @@ function QuizComponent({
     function setAnswers(selectedAnswer, correctAnswer) {
         // SetAnswers is the event handler for the click event on each button
         // selectedAnswer is the answer selected
-        //  isCorrect is a boolean that determines what will show up in the result panel. it uses the arguments passed into this function to check if the selected answer
-        // ...is the same as the correct answer
+
         // answerSelected is a boolean that determines whether the result pane should show up. It is set to disappear after a small delay
         // This function sets what list item to display by incrementing the question index state value 1.5s after setting selectedAnswer and isCorrect.
         // However if we've gotten to the end of the quiz questions, then the endQuiz function is called. This endQuiz function is defined is a prop of this Quiz component in the App component
@@ -269,6 +265,7 @@ function QuizComponent({
                 ? finalScore.current + 20
                 : finalScore.current + 0;
         setAnswerSelected(true);
+        reduceDuration(selectedAnswer === correctAnswer);
         markAnswer(selectedAnswer === correctAnswer);
         playSound(selectedAnswer === correctAnswer);
         if (questionIndex + 1 >= quizQuestions.length) {
